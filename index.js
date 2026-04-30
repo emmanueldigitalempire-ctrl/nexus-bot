@@ -1,14 +1,14 @@
 const {
     default: makeWASocket,
     useMultiFileAuthState,
-    fetchLatestBaileysVersion
+    fetchLatestBaileysVersion,
+    DisconnectReason
 } = require("@whiskeysockets/baileys")
 
 const pino = require("pino")
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState("./auth")
-
     const { version } = await fetchLatestBaileysVersion()
 
     const sock = makeWASocket({
@@ -24,14 +24,28 @@ async function startBot() {
         if (connection === "close") {
             console.log("❌ Connection closed")
 
+            const shouldReconnect =
+                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
+
+            if (shouldReconnect) {
+                console.log("🔁 Reconnecting...")
+                startBot()
+            }
+
         } else if (connection === "open") {
             console.log("✅ Nexus Bot Connected!")
         }
 
-        // 🔥 THIS IS THE MAGIC (PAIRING CODE)
-        if (!sock.authState.creds.registered) {
-            const code = await sock.requestPairingCode("2348120659660")
-            console.log("🔑 Pairing Code:", code)
+        // 🔥 FIXED PAIRING LOGIC (ONLY AFTER CONNECTING STATE)
+        if (connection === "connecting") {
+            if (!sock.authState.creds.registered) {
+                try {
+                    const code = await sock.requestPairingCode("2348120659660")
+                    console.log("🔑 Pairing Code:", code)
+                } catch (err) {
+                    console.log("❌ Pairing error:", err.message)
+                }
+            }
         }
     })
 
