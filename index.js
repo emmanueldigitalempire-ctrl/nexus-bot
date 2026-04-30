@@ -6,6 +6,11 @@ const {
 } = require("@whiskeysockets/baileys")
 
 const pino = require("pino")
+const fs = require("fs")
+const path = require("path")
+
+// 🔥 Load handler
+const handler = require("./handler")
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState("./auth")
@@ -15,41 +20,47 @@ async function startBot() {
         version,
         auth: state,
         logger: pino({ level: "silent" }),
-        browser: ["Ubuntu", "Chrome", "20.0.04"]
+        browser: ["Ubuntu", "Chrome", "20.0.04"],
+        printQRInTerminal: false // 🚫 no QR in production
     })
 
-    sock.ev.on("connection.update", async (update) => {
+    // 🔥 Connection handler
+    sock.ev.on("connection.update", (update) => {
         const { connection, lastDisconnect } = update
 
         if (connection === "close") {
-            console.log("❌ Connection closed")
+            const reason = lastDisconnect?.error?.output?.statusCode
 
-            const shouldReconnect =
-                lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut
+            console.log("❌ Connection closed:", reason)
 
-            if (shouldReconnect) {
+            if (reason !== DisconnectReason.loggedOut) {
                 console.log("🔁 Reconnecting...")
                 startBot()
+            } else {
+                console.log("🚫 Logged out. Delete auth and restart.")
             }
 
         } else if (connection === "open") {
             console.log("✅ Nexus Bot Connected!")
         }
-
-        // 🔥 FIXED PAIRING LOGIC (ONLY AFTER CONNECTING STATE)
-        if (connection === "connecting") {
-            if (!sock.authState.creds.registered) {
-                try {
-                    const code = await sock.requestPairingCode("2348120659660")
-                    console.log("🔑 Pairing Code:", code)
-                } catch (err) {
-                    console.log("❌ Pairing error:", err.message)
-                }
-            }
-        }
     })
 
+    // 🔥 Save session
     sock.ev.on("creds.update", saveCreds)
+
+    // 🔥 Messages handler
+    sock.ev.on("messages.upsert", async (m) => {
+        try {
+            const msg = m.messages[0]
+            if (!msg.message) return
+
+            await handler(sock, msg)
+
+        } catch (err) {
+            console.log("HANDLER ERROR:", err.message)
+        }
+    })
 }
 
+// 🚀 Start bot
 startBot()
