@@ -1,5 +1,5 @@
 # Use Node base image
-FROM node:18
+FROM node:20
 
 # Install Python + FFmpeg
 RUN apt update && apt install -y python3 ffmpeg
