@@ -1,66 +1,42 @@
 const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    fetchLatestBaileysVersion,
-    DisconnectReason
+  default: makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion
 } = require("@whiskeysockets/baileys")
 
 const pino = require("pino")
-const fs = require("fs")
-const path = require("path")
-
-// 🔥 Load handler
-const handler = require("./handler")
+const qrcode = require("qrcode-terminal")
 
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState("./auth")
-    const { version } = await fetchLatestBaileysVersion()
+  const { state, saveCreds } = await useMultiFileAuthState("./auth")
+  const { version } = await fetchLatestBaileysVersion()
 
-    const sock = makeWASocket({
-        version,
-        auth: state,
-        logger: pino({ level: "silent" }),
-        browser: ["Ubuntu", "Chrome", "20.0.04"],
-        printQRInTerminal: false // 🚫 no QR in production
-    })
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    logger: pino({ level: "silent" }),
+    browser: ["Windows", "Chrome", "1.0.0"]
+  })
 
-    // 🔥 Connection handler
-    sock.ev.on("connection.update", (update) => {
-        const { connection, lastDisconnect } = update
+  sock.ev.on("connection.update", (update) => {
+    const { connection, qr } = update
 
-        if (connection === "close") {
-            const reason = lastDisconnect?.error?.output?.statusCode
+    if (qr) {
+      console.clear()
+      console.log("📱 Scan this QR quickly:")
+      qrcode.generate(qr, { small: true })
+    }
 
-            console.log("❌ Connection closed:", reason)
+    if (connection === "open") {
+      console.log("✅ Connected successfully!")
+    }
 
-            if (reason !== DisconnectReason.loggedOut) {
-                console.log("🔁 Reconnecting...")
-                startBot()
-            } else {
-                console.log("🚫 Logged out. Delete auth and restart.")
-            }
+    if (connection === "close") {
+      console.log("❌ Connection closed")
+    }
+  })
 
-        } else if (connection === "open") {
-            console.log("✅ Nexus Bot Connected!")
-        }
-    })
-
-    // 🔥 Save session
-    sock.ev.on("creds.update", saveCreds)
-
-    // 🔥 Messages handler
-    sock.ev.on("messages.upsert", async (m) => {
-        try {
-            const msg = m.messages[0]
-            if (!msg.message) return
-
-            await handler(sock, msg)
-
-        } catch (err) {
-            console.log("HANDLER ERROR:", err.message)
-        }
-    })
+  sock.ev.on("creds.update", saveCreds)
 }
 
-// 🚀 Start bot
 startBot()
