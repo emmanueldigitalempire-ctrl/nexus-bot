@@ -1,6 +1,6 @@
 {
-    "packages": [
-        "nodejs",
-        "python3"
-    ]
+    "packages": {
+        "nodejs": "18",
+        "python3": "3.11"
+    }
 }
