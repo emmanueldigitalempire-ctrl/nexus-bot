@@ -1,42 +1,20 @@
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion
-} = require("@whiskeysockets/baileys")
-
-const pino = require("pino")
-const qrcode = require("qrcode-terminal")
-
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState("./auth")
-  const { version } = await fetchLatestBaileysVersion()
-
-  const sock = makeWASocket({
-    version,
-    auth: state,
-    logger: pino({ level: "silent" }),
-    browser: ["Windows", "Chrome", "1.0.0"]
-  })
-
-  sock.ev.on("connection.update", (update) => {
-    const { connection, qr } = update
-
-    if (qr) {
-      console.clear()
-      console.log("📱 Scan this QR quickly:")
-      qrcode.generate(qr, { small: true })
-    }
-
-    if (connection === "open") {
-      console.log("✅ Connected successfully!")
-    }
+sock.ev.on("connection.update", (update) => {
+    const { connection, lastDisconnect } = update
 
     if (connection === "close") {
-      console.log("❌ Connection closed")
+        const reason = lastDisconnect?.error?.output?.statusCode
+
+        console.log("❌ Connection closed:", reason)
+
+        // 🔥 ALWAYS RECONNECT (unless logged out)
+        if (reason !== 401) {
+            console.log("🔁 Reconnecting in 5 seconds...")
+            setTimeout(() => startBot(), 5000)
+        } else {
+            console.log("🚫 Logged out. Need new auth.")
+        }
+
+    } else if (connection === "open") {
+        console.log("✅ Nexus Bot Connected!")
     }
-  })
-
-  sock.ev.on("creds.update", saveCreds)
-}
-
-startBot()
+})
