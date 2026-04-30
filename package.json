@@ -1,21 +1,22 @@
 {
   "name": "nexus-bot",
   "version": "1.0.0",
-  "description": "Nexus WhatsApp Bot",
+  "description": "Nexus Empire WhatsApp Bot",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "Nexus",
+  "author": "Emmanuel Evidence",
   "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "7.0.0-rc.9",
-    "axios": "^1.15.2",
-    "link-preview-js": "3.2.0",
-    "pino": "^10.3.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "axios": "^1.7.2",
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0",
+    "pino": "^9.3.2",
     "qrcode-terminal": "^0.12.0",
     "yt-dlp-exec": "^1.0.2",
-    "yt-search": "^0.0.2"
+    "yt-search": "^2.10.4"
   }
 }
